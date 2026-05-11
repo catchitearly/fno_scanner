@@ -1,0 +1,67 @@
+name: FNO Straddle VWAP Scanner
+
+# ── Triggers ──────────────────────────────────────────────────────────────────
+on:
+  # Manual trigger with optional input overrides
+  workflow_dispatch:
+    inputs:
+      lookback_hours:
+        description: "Lookback window in hours (default: 12)"
+        required: false
+        default: "12"
+      min_volume:
+        description: "Min volume to treat a strike as liquid (default: 10)"
+        required: false
+        default: "10"
+
+  # Optional: uncomment to also run on a schedule (Mon-Fri 09:30 IST = 04:00 UTC)
+  # schedule:
+  #   - cron: "0 4 * * 1-5"
+
+# ── Job ───────────────────────────────────────────────────────────────────────
+jobs:
+  scan:
+    name: Run FNO Scanner
+    runs-on: ubuntu-latest
+    timeout-minutes: 30        # safety net; 8 stocks ≈ 2 min
+
+    steps:
+
+      # 1. Check out repository
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      # 2. Set up Python
+      - name: Set up Python 3.11
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+          cache: "pip"
+
+      # 3. Install dependencies
+      - name: Install dependencies
+        run: pip install requests pandas
+
+      # 4. Run scanner
+      #    Secrets FYERS_CLIENT_ID and FYERS_ACCESS_TOKEN must be set in
+      #    Settings → Secrets and variables → Actions → New repository secret
+      - name: Run scanner
+        env:
+          FYERS_CLIENT_ID:    ${{ secrets.FYERS_CLIENT_ID }}
+          FYERS_ACCESS_TOKEN: ${{ secrets.FYERS_ACCESS_TOKEN }}
+          LOOKBACK_HOURS:     ${{ github.event.inputs.lookback_hours || '12' }}
+          MIN_VOLUME:         ${{ github.event.inputs.min_volume || '10' }}
+          CSV_FILE:           fno_stocks.csv
+          TIMEFRAME:          "5"
+        run: python fno_scanner.py
+
+      # 5. Upload the generated dashboard as a downloadable artifact
+      #    Available for 7 days under Actions → this run → Artifacts
+      - name: Upload dashboard
+        if: always()          # upload even if scan had partial failures
+        uses: actions/upload-artifact@v4
+        with:
+          name: fno-dashboard-${{ github.run_number }}-${{ github.run_attempt }}
+          path: fno_dashboard.html
+          retention-days: 7
+          if-no-files-found: warn
