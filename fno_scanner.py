@@ -22,6 +22,7 @@ import datetime
 import requests
 import pandas as pd
 from typing import Optional
+from fyers_apiv3 import fyersModel
 
 import os
 
@@ -41,11 +42,21 @@ TIMEFRAME            = int(os.environ.get("TIMEFRAME",      "5").strip())
 LOOKBACK_HOURS       = int(os.environ.get("LOOKBACK_HOURS", "12").strip())
 MIN_VOLUME_THRESHOLD = int(os.environ.get("MIN_VOLUME",     "10").strip())
 
-# Fyers v3 REST endpoint for historical data
-HISTORY_URL = "https://api.fyers.in/data/history"
-
 # Fyers public symbol master (updated daily by Fyers, no auth needed)
 NSE_FO_URL  = "https://public.fyers.in/sym_details/NSE_FO.csv"
+
+# SDK instance — initialised in main() after credential validation
+_fyers: fyersModel.FyersModel = None  # type: ignore
+
+
+def init_sdk() -> fyersModel.FyersModel:
+    """Initialise the Fyers SDK with the access token."""
+    return fyersModel.FyersModel(
+        client_id  = FYERS_CLIENT_ID,
+        token      = FYERS_ACCESS_TOKEN,
+        is_async   = False,
+        log_path   = "",          # suppress SDK log files
+    )
 
 # NSE_FO.csv column indices (0-based, confirmed from live file May 2026)
 COL_SYMBOL    = 9   # Full Fyers symbol  e.g. NSE:BHARATFORG26MAY200CE
@@ -56,15 +67,7 @@ COL_OPT_TYPE  = 16  # CE or PE
 COL_LOT_SIZE  = 2   # Lot size
 
 
-def build_auth_header() -> dict:
-    """
-    Fyers v3 REST:  Authorization: <client_id>:<access_token>
-    Both values are stripped of whitespace at load time.
-    """
-    return {
-        "Authorization": f"{FYERS_CLIENT_ID}:{FYERS_ACCESS_TOKEN}",
-        "Content-Type":  "application/json",
-    }
+# (auth header no longer needed — SDK handles auth internally)
 
 
 # ── Symbol master ─────────────────────────────────────────────────────────────
@@ -152,28 +155,28 @@ def get_option_symbols(fo_df: pd.DataFrame,
 def get_historical(symbol: str, from_ts: int, to_ts: int,
                    resolution: int = 5) -> list[dict]:
     """
-    Fetch OHLCV candles from Fyers v3 REST API.
+    Fetch OHLCV candles using the official fyers-apiv3 SDK.
+    The SDK handles the correct endpoint, method and auth header internally.
     Returns list of {ts, open, high, low, close, volume} or [].
     """
-    params = {
+    global _fyers
+    data = {
         "symbol":      symbol,
         "resolution":  str(resolution),
-        "date_format": "0",           # unix timestamps
+        "date_format": "0",       # unix timestamps in response
         "range_from":  str(from_ts),
         "range_to":    str(to_ts),
         "cont_flag":   "1",
     }
     try:
-        r = requests.get(HISTORY_URL, headers=build_auth_header(),
-                         params=params, timeout=15)
-        data = r.json()
-        if data.get("s") == "ok" and data.get("candles"):
+        resp = _fyers.history(data=data)
+        if resp.get("s") == "ok" and resp.get("candles"):
             return [
                 {"ts": c[0], "open": c[1], "high": c[2],
                  "low": c[3], "close": c[4], "volume": c[5]}
-                for c in data["candles"]
+                for c in resp["candles"]
             ]
-        msg = data.get("message", data.get("errmsg", ""))
+        msg = resp.get("message", resp.get("errmsg", ""))
         if msg and msg not in ("no_data", ""):
             print(f"    [API] {symbol}: {msg}")
     except Exception as e:
@@ -704,6 +707,12 @@ def main():
         print("  [ERROR] One or more credentials are missing or placeholder.")
         print("  Set FYERS_CLIENT_ID and FYERS_ACCESS_TOKEN as GitHub Secrets.")
         raise SystemExit(1)
+
+    # Initialise Fyers SDK (after credential check)
+    global _fyers
+    _fyers = init_sdk()
+    print("  SDK       : fyers-apiv3 initialised")
+    print()
 
     # Download symbol master once (shared across all stocks)
     fo_df = load_fo_master()
