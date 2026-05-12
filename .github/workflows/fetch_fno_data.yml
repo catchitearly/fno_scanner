@@ -2,13 +2,11 @@ name: Fetch Fyers FnO Data
 
 # ─────────────────────────────────────────────────────────────────────────────
 # Schedule: Mon–Fri at 16:00 IST (10:30 UTC) — after NSE market close.
-# Also supports manual dispatch with a custom stock list.
+# Manual dispatch also supported with a custom stock list.
 #
 # Required GitHub Secrets:
 #   FYERS_CLIENT_ID      → your Fyers App ID, e.g. XYZ123-100
-#   FYERS_ACCESS_TOKEN   → daily access token (update this secret each trading
-#                          morning before market opens, or after generating it
-#                          via the Fyers dashboard / local auth script)
+#   FYERS_ACCESS_TOKEN   → daily access token (update before 10:30 UTC each day)
 # ─────────────────────────────────────────────────────────────────────────────
 on:
   schedule:
@@ -37,8 +35,6 @@ jobs:
       # ── 1. Checkout ────────────────────────────────────────────────────────
       - name: Checkout repository
         uses: actions/checkout@v4
-        with:
-          fetch-depth: 0
 
       # ── 2. Python setup ────────────────────────────────────────────────────
       - name: Set up Python ${{ env.PYTHON_VERSION }}
@@ -53,7 +49,11 @@ jobs:
           pip install --upgrade pip
           pip install -r requirements.txt
 
-      # ── 4. Fetch futures + option chain + straddle history ─────────────────
+      # ── 4. Debug — confirm files exist ────────────────────────────────────
+      - name: List repo root
+        run: ls -la
+
+      # ── 5. Fetch futures + option chain + straddle history ─────────────────
       - name: Fetch FnO Data
         env:
           FYERS_CLIENT_ID:    ${{ secrets.FYERS_CLIENT_ID }}
@@ -61,9 +61,9 @@ jobs:
         run: |
           STOCKS="${{ github.event.inputs.stocks || 'RELIANCE' }}"
           echo "Stocks: $STOCKS"
-          python scripts/fetch_fno_data.py --stocks $STOCKS
+          python fetch_fno_data.py --stocks $STOCKS
 
-      # ── 5. Upload data + logs as artifacts ────────────────────────────────
+      # ── 6. Upload data + logs as artifacts ────────────────────────────────
       - name: Upload artifacts
         if: always()
         uses: actions/upload-artifact@v4
@@ -74,7 +74,7 @@ jobs:
             logs/
           retention-days: 30
 
-      # ── 6. Commit data files back to repository ───────────────────────────
+      # ── 7. Commit data files back to repository ───────────────────────────
       - name: Commit data to repo
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
@@ -90,7 +90,7 @@ jobs:
             echo "✓ Pushed."
           fi
 
-      # ── 7. Job summary ─────────────────────────────────────────────────────
+      # ── 8. Job summary ─────────────────────────────────────────────────────
       - name: Write job summary
         if: always()
         run: |
