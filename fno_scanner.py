@@ -39,7 +39,7 @@ else:
     FYERS_ACCESS_TOKEN = _raw_token
 CSV_FILE             = os.environ.get("CSV_FILE",           "fno_stocks.csv").strip()
 TIMEFRAME            = int(os.environ.get("TIMEFRAME",      "5").strip())
-LOOKBACK_HOURS       = int(os.environ.get("LOOKBACK_HOURS", "12").strip())
+LOOKBACK_HOURS       = int(os.environ.get("LOOKBACK_HOURS", "48").strip())
 MIN_VOLUME_THRESHOLD = int(os.environ.get("MIN_VOLUME",     "10").strip())
 
 # Fyers public symbol master (updated daily by Fyers, no auth needed)
