@@ -1,0 +1,112 @@
+name: Fetch Fyers FnO Data
+
+# ─────────────────────────────────────────────────────────────────────────────
+# Schedule: Mon–Fri at 16:00 IST (10:30 UTC) — after NSE market close.
+# Also supports manual dispatch with a custom stock list.
+#
+# Required GitHub Secrets:
+#   FYERS_CLIENT_ID      → your Fyers App ID, e.g. XYZ123-100
+#   FYERS_ACCESS_TOKEN   → daily access token (update this secret each trading
+#                          morning before market opens, or after generating it
+#                          via the Fyers dashboard / local auth script)
+# ─────────────────────────────────────────────────────────────────────────────
+on:
+  schedule:
+    - cron: "30 10 * * 1-5"   # 10:30 UTC = 16:00 IST, Mon–Fri
+
+  workflow_dispatch:
+    inputs:
+      stocks:
+        description: "Space-separated NSE tickers (e.g. RELIANCE INFY TCS)"
+        required: false
+        default: "RELIANCE"
+
+permissions:
+  contents: write    # needed to commit CSV files back to the repo
+
+env:
+  PYTHON_VERSION: "3.11"
+
+jobs:
+  fetch-fno-data:
+    name: "Fetch FnO Data"
+    runs-on: ubuntu-latest
+    timeout-minutes: 20
+
+    steps:
+      # ── 1. Checkout ────────────────────────────────────────────────────────
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      # ── 2. Python setup ────────────────────────────────────────────────────
+      - name: Set up Python ${{ env.PYTHON_VERSION }}
+        uses: actions/setup-python@v5
+        with:
+          python-version: ${{ env.PYTHON_VERSION }}
+          cache: "pip"
+
+      # ── 3. Install dependencies ────────────────────────────────────────────
+      - name: Install dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      # ── 4. Fetch futures + option chain + straddle history ─────────────────
+      - name: Fetch FnO Data
+        env:
+          FYERS_CLIENT_ID:    ${{ secrets.FYERS_CLIENT_ID }}
+          FYERS_ACCESS_TOKEN: ${{ secrets.FYERS_ACCESS_TOKEN }}
+        run: |
+          STOCKS="${{ github.event.inputs.stocks || 'RELIANCE' }}"
+          echo "Stocks: $STOCKS"
+          python scripts/fetch_fno_data.py --stocks $STOCKS
+
+      # ── 5. Upload data + logs as artifacts ────────────────────────────────
+      - name: Upload artifacts
+        if: always()
+        uses: actions/upload-artifact@v4
+        with:
+          name: fno-data-${{ github.run_number }}
+          path: |
+            data/
+            logs/
+          retention-days: 30
+
+      # ── 6. Commit data files back to repository ───────────────────────────
+      - name: Commit data to repo
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+        run: |
+          git config user.name  "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add data/ logs/
+          if git diff --cached --quiet; then
+            echo "Nothing new to commit."
+          else
+            git commit -m "chore: FnO data — $(date -u '+%Y-%m-%d %H:%M UTC')"
+            git push
+            echo "✓ Pushed."
+          fi
+
+      # ── 7. Job summary ─────────────────────────────────────────────────────
+      - name: Write job summary
+        if: always()
+        run: |
+          echo "## FnO Fetch — $(date -u '+%Y-%m-%d %H:%M UTC')" >> $GITHUB_STEP_SUMMARY
+          echo "" >> $GITHUB_STEP_SUMMARY
+          echo "| Dataset | File | Rows |" >> $GITHUB_STEP_SUMMARY
+          echo "|---------|------|------|" >> $GITHUB_STEP_SUMMARY
+          for f in data/futures/*_latest.csv; do
+            [ -f "$f" ] && rows=$(tail -n +2 "$f" | wc -l) || rows="—"
+            echo "| Futures | $(basename $f) | $rows |" >> $GITHUB_STEP_SUMMARY
+          done
+          for f in data/option_chain/*_latest.csv; do
+            [ -f "$f" ] && rows=$(tail -n +2 "$f" | wc -l) || rows="—"
+            echo "| Option Chain | $(basename $f) | $rows |" >> $GITHUB_STEP_SUMMARY
+          done
+          for f in data/straddles/*_latest.csv; do
+            [ -f "$f" ] && rows=$(tail -n +2 "$f" | wc -l) || rows="—"
+            echo "| Straddle | $(basename $f) | $rows |" >> $GITHUB_STEP_SUMMARY
+          done
