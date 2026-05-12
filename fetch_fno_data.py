@@ -31,7 +31,7 @@ from fyers_apiv3 import fyersModel
 # ─────────────────────────────────────────────────────────────────
 # Logging
 # ─────────────────────────────────────────────────────────────────
-LOG_DIR = Path(__file__).parent.parent / "logs"
+LOG_DIR = Path(__file__).parent / "logs"
 LOG_DIR.mkdir(parents=True, exist_ok=True)
 
 logging.basicConfig(
@@ -47,7 +47,7 @@ log = logging.getLogger(__name__)
 # ─────────────────────────────────────────────────────────────────
 # Config
 # ─────────────────────────────────────────────────────────────────
-DATA_DIR     = Path(__file__).parent.parent / "data"
+DATA_DIR     = Path(__file__).parent / "data"
 FUTURES_DIR  = DATA_DIR / "futures"
 OPTCHAIN_DIR = DATA_DIR / "option_chain"
 STRADDLE_DIR = DATA_DIR / "straddles"
