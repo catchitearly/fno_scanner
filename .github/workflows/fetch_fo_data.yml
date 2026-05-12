@@ -1,0 +1,65 @@
+name: Fetch F&O Historical Data
+
+on:
+  schedule:
+    # Run at 3:45 PM IST (10:15 AM UTC) after market close
+    - cron: '15 10 * * 1-5'
+  workflow_dispatch:  # Allow manual trigger
+    inputs:
+      stock_symbol:
+        description: 'Stock symbol (e.g., RELIANCE, TCS)'
+        required: false
+        default: 'RELIANCE'
+
+jobs:
+  fetch-data:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout repository
+      uses: actions/checkout@v4
+    
+    - name: Set up Python
+      uses: actions/setup-python@v5
+      with:
+        python-version: '3.10'
+    
+    - name: Install dependencies
+      run: |
+        python -m pip install --upgrade pip
+        pip install -r requirements.txt
+    
+    - name: Create data directory
+      run: mkdir -p data
+    
+    - name: Fetch Futures Historical Data
+      env:
+        FYERS_APP_ID: ${{ secrets.FYERS_APP_ID }}
+        FYERS_SECRET_KEY: ${{ secrets.FYERS_SECRET_KEY }}
+        FYERS_ACCESS_TOKEN: ${{ secrets.FYERS_ACCESS_TOKEN }}
+      run: |
+        python scripts/fetch_futures_data.py
+    
+    - name: Fetch Option Chain with Strike Increments
+      env:
+        FYERS_APP_ID: ${{ secrets.FYERS_APP_ID }}
+        FYERS_SECRET_KEY: ${{ secrets.FYERS_SECRET_KEY }}
+        FYERS_ACCESS_TOKEN: ${{ secrets.FYERS_ACCESS_TOKEN }}
+      run: |
+        python scripts/fetch_option_chain.py
+    
+    - name: Upload data artifacts
+      uses: actions/upload-artifact@v4
+      with:
+        name: fo-data
+        path: data/
+        retention-days: 7
+    
+    - name: Commit and push data (optional)
+      run: |
+        git config --local user.email "action@github.com"
+        git config --local user.name "GitHub Action"
+        git add data/
+        git diff --quiet && git diff --staged --quiet || git commit -m "Update F&O data $(date '+%Y-%m-%d %H:%M:%S')"
+        git push
+      continue-on-error: true
