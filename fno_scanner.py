@@ -28,7 +28,14 @@ import os
 # Config from environment variables (set as GitHub Secrets or local exports)
 # .strip() guards against accidental newlines/spaces when pasting into GitHub Secrets
 FYERS_CLIENT_ID      = os.environ.get("FYERS_CLIENT_ID",    "YOUR_APP_ID-100").strip()
-FYERS_ACCESS_TOKEN   = os.environ.get("FYERS_ACCESS_TOKEN", "YOUR_ACCESS_TOKEN").strip()
+_raw_token           = os.environ.get("FYERS_ACCESS_TOKEN", "YOUR_ACCESS_TOKEN").strip()
+# Normalise token: some users store "APPID-100:eyJ..." (the combined string);
+# others store just the raw JWT "eyJ...".  Strip the "APPID:" prefix if present
+# so the header is always built as  client_id + ":" + raw_jwt.
+if ":" in _raw_token and not _raw_token.startswith("eyJ"):
+    FYERS_ACCESS_TOKEN = _raw_token.split(":", 1)[1].strip()
+else:
+    FYERS_ACCESS_TOKEN = _raw_token
 CSV_FILE             = os.environ.get("CSV_FILE",           "fno_stocks.csv").strip()
 TIMEFRAME            = int(os.environ.get("TIMEFRAME",      "5").strip())
 LOOKBACK_HOURS       = int(os.environ.get("LOOKBACK_HOURS", "12").strip())
@@ -689,7 +696,8 @@ def main():
 
     print(f"  Client ID : {'SET (' + FYERS_CLIENT_ID[:8] + '...)' if client_id_ok else 'MISSING — set FYERS_CLIENT_ID secret'}")
     print(f"  Token     : {'SET (length=' + str(len(FYERS_ACCESS_TOKEN)) + ')' if token_ok else 'MISSING — set FYERS_ACCESS_TOKEN secret'}")
-    print(f"  Token ends: ...{FYERS_ACCESS_TOKEN[-6:] if token_ok and len(FYERS_ACCESS_TOKEN) > 6 else '???'}")
+    print(f"  Token type: {'JWT (eyJ...)' if FYERS_ACCESS_TOKEN.startswith('eyJ') else 'UNEXPECTED FORMAT — should start with eyJ'}")
+    print(f"  Auth hdr  : {FYERS_CLIENT_ID}:<token>  (requests library will send this)")
     print()
 
     if not client_id_ok or not token_ok:
