@@ -47,6 +47,7 @@ NSE_FO_URL  = "https://public.fyers.in/sym_details/NSE_FO.csv"
 
 # SDK instance — initialised in main() after credential validation
 _fyers: fyersModel.FyersModel = None  # type: ignore
+_debug_call_count: int = 0  # how many history() calls have been made
 
 
 def init_sdk() -> fyersModel.FyersModel:
@@ -170,15 +171,21 @@ def get_historical(symbol: str, from_ts: int, to_ts: int,
     }
     try:
         resp = _fyers.history(data=data)
+        # Always print full response for the first call to aid debugging;
+        # after DEBUG_CALLS calls, only print on failure.
+        global _debug_call_count
+        _debug_call_count += 1
+        if _debug_call_count <= 2 or resp.get("s") != "ok":
+            # Truncate candles array to keep logs readable
+            dbg = {k: (v[:2] if k == "candles" and isinstance(v, list) else v)
+                   for k, v in resp.items()}
+            print(f"    [DBG] {symbol}: {dbg}")
         if resp.get("s") == "ok" and resp.get("candles"):
             return [
                 {"ts": c[0], "open": c[1], "high": c[2],
                  "low": c[3], "close": c[4], "volume": c[5]}
                 for c in resp["candles"]
             ]
-        msg = resp.get("message", resp.get("errmsg", ""))
-        if msg and msg not in ("no_data", ""):
-            print(f"    [API] {symbol}: {msg}")
     except Exception as e:
         print(f"    [ERR] {symbol}: {e}")
     return []
