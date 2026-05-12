@@ -26,8 +26,9 @@ from typing import Optional
 import os
 
 # Config from environment variables (set as GitHub Secrets or local exports)
-FYERS_CLIENT_ID      = os.environ.get("FYERS_CLIENT_ID",    "YOUR_APP_ID-100")
-FYERS_ACCESS_TOKEN   = os.environ.get("FYERS_ACCESS_TOKEN", "YOUR_ACCESS_TOKEN")
+FYERS_CLIENT_ID    = os.environ.get("FYERS_CLIENT_ID", ...).strip()
+FYERS_ACCESS_TOKEN = os.environ.get("FYERS_ACCESS_TOKEN", ...).strip()
+
 CSV_FILE             = os.environ.get("CSV_FILE",           "fno_stocks.csv")
 TIMEFRAME            = int(os.environ.get("TIMEFRAME",      "5"))
 LOOKBACK_HOURS       = int(os.environ.get("LOOKBACK_HOURS", "12"))
