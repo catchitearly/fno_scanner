@@ -1,14 +1,6 @@
 fyers:
-  app_id: "YOUR_APP_ID"
-  secret_key: "YOUR_SECRET_KEY"
-  redirect_uri: "https://your-redirect-uri.com"
-  # For GitHub Actions, store token in secrets
-  # access_token will be loaded from environment variable
+  app_id: "YOUR_APP_ID_HERE"
+  access_token: "YOUR_ACCESS_TOKEN_HERE"
   
-data_config:
-  resolution: "5"  # 5 minutes
-  days_back: 2
-  symbols:
-    - "RELIANCE"
-    - "TCS"
-    - "HDFCBANK"
+# For GitHub Actions, use these environment variables instead:
+# FYERS_APP_ID and FYERS_ACCESS_TOKEN
