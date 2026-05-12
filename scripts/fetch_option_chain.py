@@ -2,7 +2,7 @@ import sys
 import os
 sys.path.append(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from fyers_api import fyersModel
+from fyers_apiv3 import fyersModel
 import pandas as pd
 import yaml
 from datetime import datetime
@@ -17,12 +17,10 @@ def setup_fyers_session():
     """Initialize Fyers API session"""
     config = load_config()
     app_id = config['fyers']['app_id']
+    access_token = config['fyers']['access_token']
     
-    if 'access_token' in config['fyers']:
-        fyers = fyersModel.FyersModel(client_id=app_id, token=config['fyers']['access_token'])
-        return fyers
-    
-    return None
+    fyers = fyersModel.FyersModel(client_id=app_id, is_async=False, token=access_token)
+    return fyers
 
 def get_option_chain(fyers, symbol, strike_count=10):
     """
@@ -38,12 +36,16 @@ def get_option_chain(fyers, symbol, strike_count=10):
         "strikecount": strike_count
     }
     
-    response = fyers.optionchain(data=data)
-    
-    if response['s'] == 'ok':
-        return response
-    else:
-        print(f"Error fetching option chain: {response}")
+    try:
+        response = fyers.option_chain(data=data)
+        
+        if response['s'] == 'ok':
+            return response
+        else:
+            print(f"Error fetching option chain: {response}")
+            return None
+    except Exception as e:
+        print(f"Exception fetching option chain: {e}")
         return None
 
 def calculate_strike_increments(option_chain_data):
@@ -73,10 +75,10 @@ def calculate_strike_increments(option_chain_data):
     return None
 
 def main():
-    stock_name = "RELIANCE"  # This should match the stock from futures
+    stock_name = os.getenv('STOCK_SYMBOL', "RELIANCE")
     strike_count = 10  # Number of strikes on each side
     
-    print(f"Fetching option chain for {stock_name}")
+    print(f"🔍 Fetching option chain for {stock_name}")
     
     # Get underlying symbol
     df_fno = get_fno_symbols()
@@ -86,18 +88,14 @@ def main():
     ]
     
     if underlying_symbols.empty:
-        print(f"Underlying symbol not found for {stock_name}")
+        print(f"❌ Underlying symbol not found for {stock_name}")
         sys.exit(1)
     
     underlying_symbol = underlying_symbols.iloc[0]['symbol']
-    print(f"Underlying symbol: {underlying_symbol}")
+    print(f"📊 Underlying symbol: {underlying_symbol}")
     
     # Setup Fyers session
     fyers = setup_fyers_session()
-    
-    if not fyers:
-        print("Fyers session not configured")
-        sys.exit(1)
     
     # Fetch option chain
     option_chain = get_option_chain(fyers, underlying_symbol, strike_count)
@@ -107,24 +105,25 @@ def main():
         strike_info = calculate_strike_increments(option_chain)
         
         if strike_info:
-            print(f"\nStrike Price Analysis for {stock_name}:")
+            print(f"\n✅ Strike Price Analysis for {stock_name}:")
             print(f"Total strikes: {strike_info['total_strikes']}")
             print(f"Strike range: {strike_info['min_strike']} to {strike_info['max_strike']}")
-            print(f"Average increment: {strike_info['avg_increment']}")
-            print(f"All increments: {strike_info['increments']}")
+            print(f"Average increment: ₹{strike_info['avg_increment']:.2f}")
+            print(f"Strike increments: {strike_info['increments']}")
             
             # Save option chain data
             timestamp = datetime.now().strftime("%Y%m%d_%H%M%S")
-            filename = f"data/{stock_name}_optionchain_{timestamp}.json"
             os.makedirs("data", exist_ok=True)
+            filename = f"data/{stock_name}_optionchain_{timestamp}.json"
             
             with open(filename, 'w') as f:
                 json.dump(option_chain, f, indent=2)
-            print(f"Option chain saved to {filename}")
+            print(f"💾 Option chain saved to {filename}")
         else:
-            print("Unable to calculate strike increments")
+            print("⚠️ Unable to calculate strike increments")
     else:
-        print("Failed to fetch option chain")
+        print("❌ Failed to fetch option chain")
+        sys.exit(1)
 
 if __name__ == "__main__":
     main()
