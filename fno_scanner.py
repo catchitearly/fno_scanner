@@ -26,13 +26,13 @@ from typing import Optional
 import os
 
 # Config from environment variables (set as GitHub Secrets or local exports)
-FYERS_CLIENT_ID    = os.environ.get("FYERS_CLIENT_ID", ...).strip()
-FYERS_ACCESS_TOKEN = os.environ.get("FYERS_ACCESS_TOKEN", ...).strip()
-
-CSV_FILE             = os.environ.get("CSV_FILE",           "fno_stocks.csv")
-TIMEFRAME            = int(os.environ.get("TIMEFRAME",      "5"))
-LOOKBACK_HOURS       = int(os.environ.get("LOOKBACK_HOURS", "12"))
-MIN_VOLUME_THRESHOLD = int(os.environ.get("MIN_VOLUME",     "10"))
+# .strip() guards against accidental newlines/spaces when pasting into GitHub Secrets
+FYERS_CLIENT_ID      = os.environ.get("FYERS_CLIENT_ID",    "YOUR_APP_ID-100").strip()
+FYERS_ACCESS_TOKEN   = os.environ.get("FYERS_ACCESS_TOKEN", "YOUR_ACCESS_TOKEN").strip()
+CSV_FILE             = os.environ.get("CSV_FILE",           "fno_stocks.csv").strip()
+TIMEFRAME            = int(os.environ.get("TIMEFRAME",      "5").strip())
+LOOKBACK_HOURS       = int(os.environ.get("LOOKBACK_HOURS", "12").strip())
+MIN_VOLUME_THRESHOLD = int(os.environ.get("MIN_VOLUME",     "10").strip())
 
 # Fyers v3 REST endpoint for historical data
 HISTORY_URL = "https://api.fyers.in/data/history"
@@ -52,6 +52,7 @@ COL_LOT_SIZE  = 2   # Lot size
 def build_auth_header() -> dict:
     """
     Fyers v3 REST:  Authorization: <client_id>:<access_token>
+    Both values are stripped of whitespace at load time.
     """
     return {
         "Authorization": f"{FYERS_CLIENT_ID}:{FYERS_ACCESS_TOKEN}",
@@ -682,10 +683,19 @@ def main():
     print(f"  Liquidity : min volume >= {MIN_VOLUME_THRESHOLD}")
     print(f"{'='*62}")
 
-    if "YOUR_" in FYERS_CLIENT_ID or "YOUR_" in FYERS_ACCESS_TOKEN:
-        print("\n  [ERROR] Please set FYERS_CLIENT_ID and FYERS_ACCESS_TOKEN "
-              "at the top of the script.")
-        return
+    # Validate credentials with clear diagnostics
+    client_id_ok = FYERS_CLIENT_ID and "YOUR_" not in FYERS_CLIENT_ID
+    token_ok     = FYERS_ACCESS_TOKEN and "YOUR_" not in FYERS_ACCESS_TOKEN
+
+    print(f"  Client ID : {'SET (' + FYERS_CLIENT_ID[:8] + '...)' if client_id_ok else 'MISSING — set FYERS_CLIENT_ID secret'}")
+    print(f"  Token     : {'SET (length=' + str(len(FYERS_ACCESS_TOKEN)) + ')' if token_ok else 'MISSING — set FYERS_ACCESS_TOKEN secret'}")
+    print(f"  Token ends: ...{FYERS_ACCESS_TOKEN[-6:] if token_ok and len(FYERS_ACCESS_TOKEN) > 6 else '???'}")
+    print()
+
+    if not client_id_ok or not token_ok:
+        print("  [ERROR] One or more credentials are missing or placeholder.")
+        print("  Set FYERS_CLIENT_ID and FYERS_ACCESS_TOKEN as GitHub Secrets.")
+        raise SystemExit(1)
 
     # Download symbol master once (shared across all stocks)
     fo_df = load_fo_master()
