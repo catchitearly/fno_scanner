@@ -23,6 +23,7 @@ import requests
 import pandas as pd
 from typing import Optional
 from fyers_apiv3 import fyersModel
+import pytz
 
 import os
 
@@ -161,13 +162,18 @@ def get_historical(symbol: str, from_ts: int, to_ts: int,
     Returns list of {ts, open, high, low, close, volume} or [].
     """
     global _fyers
+    # date_format=1 uses YYYY-MM-DD strings — more reliable than epoch via SDK
+    from_date = datetime.datetime.fromtimestamp(from_ts,
+                    tz=pytz.timezone("Asia/Kolkata")).strftime("%Y-%m-%d")
+    to_date   = datetime.datetime.fromtimestamp(to_ts,
+                    tz=pytz.timezone("Asia/Kolkata")).strftime("%Y-%m-%d")
     data = {
         "symbol":      symbol,
         "resolution":  str(resolution),
-        "date_format": "0",       # unix timestamps in response
-        "range_from":  str(from_ts),
-        "range_to":    str(to_ts),
-        "cont_flag":   "1",
+        "date_format": 1,           # 1 = YYYY-MM-DD strings
+        "range_from":  from_date,
+        "range_to":    to_date,
+        "cont_flag":   1,
     }
     try:
         resp = _fyers.history(data=data)
@@ -176,10 +182,9 @@ def get_historical(symbol: str, from_ts: int, to_ts: int,
         global _debug_call_count
         _debug_call_count += 1
         if _debug_call_count <= 2 or resp.get("s") != "ok":
-            # Truncate candles array to keep logs readable
             dbg = {k: (v[:2] if k == "candles" and isinstance(v, list) else v)
                    for k, v in resp.items()}
-            print(f"    [DBG] {symbol}: {dbg}")
+            print(f"    [DBG] {symbol} ({from_date}->{to_date}): {dbg}")
         if resp.get("s") == "ok" and resp.get("candles"):
             return [
                 {"ts": c[0], "open": c[1], "high": c[2],
@@ -688,14 +693,64 @@ function drawStock(i){{
 
 # ── Main ──────────────────────────────────────────────────────────────────────
 
+def market_session_window(lookback_hours: int) -> tuple[int, int]:
+    """
+    Return (from_ts, to_ts) covering the last N trading hours on NSE.
+
+    NSE trades 09:15–15:30 IST (UTC+5:30).
+    If the script runs before 09:15 IST (e.g. 03:32 UTC = 09:02 IST in GitHub
+    Actions), a naive 'now - 12h' window falls entirely outside market hours
+    and returns no_data.
+
+    Logic:
+      - to_ts   = end of last completed session (15:30 IST today if market has
+                  closed, or now if market is currently open, or 15:30 IST
+                  yesterday if we are before today's open)
+      - from_ts = to_ts minus lookback_hours, but never before 09:15 IST of
+                  the same session day so we don't bleed into a prior session.
+    """
+    import pytz
+    IST      = pytz.timezone("Asia/Kolkata")
+    now_ist  = datetime.datetime.now(IST)
+    today    = now_ist.date()
+
+    market_open  = now_ist.replace(hour=9,  minute=15, second=0, microsecond=0)
+    market_close = now_ist.replace(hour=15, minute=30, second=0, microsecond=0)
+
+    if now_ist >= market_open and now_ist <= market_close:
+        # Market is currently open — fetch up to now
+        to_dt = now_ist
+    elif now_ist > market_close:
+        # After close today — use today's close
+        to_dt = market_close
+    else:
+        # Before today's open (most common for GitHub Actions morning runs)
+        # Use previous trading day's close instead
+        prev = today - datetime.timedelta(days=1)
+        # Skip back over weekends
+        while prev.weekday() >= 5:   # 5=Sat, 6=Sun
+            prev -= datetime.timedelta(days=1)
+        to_dt = IST.localize(datetime.datetime.combine(prev, datetime.time(15, 30)))
+
+    # from_ts = to_ts minus lookback, floored at session open of that day
+    session_open_dt = to_dt.replace(hour=9, minute=15, second=0, microsecond=0)
+    from_dt = max(to_dt - datetime.timedelta(hours=lookback_hours), session_open_dt)
+
+    return int(from_dt.timestamp()), int(to_dt.timestamp())
+
+
 def main():
-    now     = datetime.datetime.now()
-    to_ts   = int(time.time())
-    from_ts = to_ts - LOOKBACK_HOURS * 3600
+    now               = datetime.datetime.now()
+    from_ts, to_ts    = market_session_window(LOOKBACK_HOURS)
+    from_ist = datetime.datetime.fromtimestamp(from_ts,
+               tz=__import__('pytz').timezone("Asia/Kolkata"))
+    to_ist   = datetime.datetime.fromtimestamp(to_ts,
+               tz=__import__('pytz').timezone("Asia/Kolkata"))
 
     print(f"\n{'='*62}")
     print(f"  FNO Straddle VWAP Scanner")
-    print(f"  Time      : {now.strftime('%Y-%m-%d %H:%M:%S')}")
+    print(f"  Time      : {now.strftime('%Y-%m-%d %H:%M:%S')} UTC")
+    print(f"  Window    : {from_ist.strftime('%d %b %H:%M')} — {to_ist.strftime('%d %b %H:%M')} IST")
     print(f"  Lookback  : {LOOKBACK_HOURS}h  ({TIMEFRAME}-min candles)")
     print(f"  Liquidity : min volume >= {MIN_VOLUME_THRESHOLD}")
     print(f"{'='*62}")
