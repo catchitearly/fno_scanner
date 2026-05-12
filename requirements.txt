@@ -1,5 +1,5 @@
 requests>=2.31.0
-fyers-apiv3
-pandas
-requests
 pyyaml
+fyers-apiv3>=3.1.1
+pandas>=2.1.0
+ 
