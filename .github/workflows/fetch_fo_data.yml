@@ -4,10 +4,12 @@ on:
   schedule:
     # Run at 3:45 PM IST (10:15 AM UTC) after market close
     - cron: '15 10 * * 1-5'
-  workflow_dispatch:  # Allow manual trigger
+    # Also run at 9:00 AM IST before market opens
+    - cron: '30 3 * * 1-5'
+  workflow_dispatch:
     inputs:
       stock_symbol:
-        description: 'Stock symbol (e.g., RELIANCE, TCS)'
+        description: 'Stock symbol (e.g., RELIANCE, TCS, HDFCBANK)'
         required: false
         default: 'RELIANCE'
 
@@ -32,34 +34,34 @@ jobs:
     - name: Create data directory
       run: mkdir -p data
     
+    - name: Create config file
+      run: |
+        cat > config.yaml << EOF
+        fyers:
+          app_id: "${{ secrets.FYERS_APP_ID }}"
+          access_token: "${{ secrets.FYERS_ACCESS_TOKEN }}"
+        EOF
+    
     - name: Fetch Futures Historical Data
       env:
-        FYERS_APP_ID: ${{ secrets.FYERS_APP_ID }}
-        FYERS_SECRET_KEY: ${{ secrets.FYERS_SECRET_KEY }}
-        FYERS_ACCESS_TOKEN: ${{ secrets.FYERS_ACCESS_TOKEN }}
+        STOCK_SYMBOL: ${{ github.event.inputs.stock_symbol || 'RELIANCE' }}
       run: |
         python scripts/fetch_futures_data.py
     
     - name: Fetch Option Chain with Strike Increments
       env:
-        FYERS_APP_ID: ${{ secrets.FYERS_APP_ID }}
-        FYERS_SECRET_KEY: ${{ secrets.FYERS_SECRET_KEY }}
-        FYERS_ACCESS_TOKEN: ${{ secrets.FYERS_ACCESS_TOKEN }}
+        STOCK_SYMBOL: ${{ github.event.inputs.stock_symbol || 'RELIANCE' }}
       run: |
         python scripts/fetch_option_chain.py
     
     - name: Upload data artifacts
       uses: actions/upload-artifact@v4
       with:
-        name: fo-data
+        name: fo-data-${{ github.run_id }}
         path: data/
         retention-days: 7
     
-    - name: Commit and push data (optional)
+    - name: List generated files
       run: |
-        git config --local user.email "action@github.com"
-        git config --local user.name "GitHub Action"
-        git add data/
-        git diff --quiet && git diff --staged --quiet || git commit -m "Update F&O data $(date '+%Y-%m-%d %H:%M:%S')"
-        git push
-      continue-on-error: true
+        echo "Generated files:"
+        ls -la data/
