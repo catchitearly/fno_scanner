@@ -11,3 +11,16 @@
 2026-05-12 04:54:32,735 | INFO |     → 0 option rows
 2026-05-12 04:54:33,086 | WARNING |   [Straddle] No strikes to fetch.
 2026-05-12 04:54:33,087 | INFO | All done. Data saved under → /home/runner/work/fno_scanner/fno_scanner/data
+2026-05-12 12:24:08,083 | INFO | ════════════════════════════════════════════════════════════
+2026-05-12 12:24:08,083 | INFO | FnO fetch started | stocks=['RELIANCE']
+2026-05-12 12:24:08,083 | INFO | ════════════════════════════════════════════════════════════
+2026-05-12 12:24:08,083 | INFO | Fyers client ready | client_id=YL3ZMIGQ7A-100
+2026-05-12 12:24:08,083 | INFO | 
+▶ RELIANCE
+2026-05-12 12:24:08,083 | INFO |   [Futures] NSE:RELIANCE26MAYFUT
+2026-05-12 12:24:08,412 | INFO |     → 150 rows | days=[datetime.date(2026, 5, 11), datetime.date(2026, 5, 12)]
+2026-05-12 12:24:08,417 | INFO |     ✓ Futures → RELIANCE_futures_5min_20260512.csv  (150 rows)
+2026-05-12 12:24:08,767 | INFO |   [OptionChain] NSE:RELIANCE-EQ | strikecount=±5
+2026-05-12 12:24:09,021 | INFO |     → 0 option rows
+2026-05-12 12:24:09,371 | WARNING |   [Straddle] No strikes to fetch.
+2026-05-12 12:24:09,372 | INFO | All done. Data saved under → /home/runner/work/fno_scanner/fno_scanner/data
