@@ -8,3 +8,5 @@
 {"level":"DEBUG","location":"[get_call:159] fyersModel","message":{"Status Code":401,"API":"/options-chain-v3"},"timestamp":"2026-05-14 12:11:12,344+0000","service":"FyersAPIRequest"}
 {"level":"DEBUG","location":"[get_call:159] fyersModel","message":{"Status Code":401,"API":"/history"},"timestamp":"2026-05-15 12:16:37,398+0000","service":"FyersAPIRequest"}
 {"level":"DEBUG","location":"[get_call:159] fyersModel","message":{"Status Code":401,"API":"/options-chain-v3"},"timestamp":"2026-05-15 12:16:37,987+0000","service":"FyersAPIRequest"}
+{"level":"DEBUG","location":"[get_call:159] fyersModel","message":{"Status Code":401,"API":"/history"},"timestamp":"2026-05-18 14:05:34,106+0000","service":"FyersAPIRequest"}
+{"level":"DEBUG","location":"[get_call:159] fyersModel","message":{"Status Code":401,"API":"/options-chain-v3"},"timestamp":"2026-05-18 14:05:34,715+0000","service":"FyersAPIRequest"}
