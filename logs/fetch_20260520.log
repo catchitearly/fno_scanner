@@ -1,0 +1,13 @@
+2026-05-20 12:41:52,701 | INFO | ════════════════════════════════════════════════════════════
+2026-05-20 12:41:52,702 | INFO | FnO fetch started | stocks=['RELIANCE']
+2026-05-20 12:41:52,702 | INFO | ════════════════════════════════════════════════════════════
+2026-05-20 12:41:52,702 | INFO | Fyers client ready | client_id=YL3ZMIGQ7A-100
+2026-05-20 12:41:52,702 | INFO | 
+▶ RELIANCE
+2026-05-20 12:41:52,702 | INFO |   [Futures] NSE:RELIANCE26MAYFUT
+2026-05-20 12:41:53,042 | WARNING |     history() failed for NSE:RELIANCE26MAYFUT | Could not authenticate the user
+2026-05-20 12:41:53,042 | INFO |     → 0 rows | days=—
+2026-05-20 12:41:53,393 | INFO |   [OptionChain] NSE:RELIANCE-EQ | strikecount=±5
+2026-05-20 12:41:54,006 | ERROR |     optionchain() error: {'message': 'Please provide valid token', 'code': -15, 's': 'error'}
+2026-05-20 12:41:54,357 | WARNING |   [Straddle] No strikes to fetch.
+2026-05-20 12:41:54,357 | INFO | All done. Data saved under → /home/runner/work/fno_scanner/fno_scanner/data
