@@ -18,3 +18,5 @@
 {"level":"ERROR","location":"[get_call:165] fyersModel","message":{"API":"/options-chain-v3","Error":{"message":"Please provide valid token","code":-15,"s":"error"}},"timestamp":"2026-05-25 13:45:34,619+0000","service":"FyersAPI"}
 {"level":"ERROR","location":"[get_call:165] fyersModel","message":{"API":"/history","Error":{"code":-16,"message":"Could not authenticate the user","s":"error"}},"timestamp":"2026-05-26 13:27:24,407+0000","service":"FyersAPI"}
 {"level":"ERROR","location":"[get_call:165] fyersModel","message":{"API":"/options-chain-v3","Error":{"message":"Please provide valid token","code":-15,"s":"error"}},"timestamp":"2026-05-26 13:27:25,046+0000","service":"FyersAPI"}
+{"level":"ERROR","location":"[get_call:165] fyersModel","message":{"API":"/history","Error":{"code":-16,"message":"Could not authenticate the user","s":"error"}},"timestamp":"2026-05-27 13:57:53,805+0000","service":"FyersAPI"}
+{"level":"ERROR","location":"[get_call:165] fyersModel","message":{"API":"/options-chain-v3","Error":{"message":"Please provide valid token","code":-15,"s":"error"}},"timestamp":"2026-05-27 13:57:54,527+0000","service":"FyersAPI"}
