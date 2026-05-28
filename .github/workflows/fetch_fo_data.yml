@@ -5,7 +5,7 @@ on:
     # Run at 3:45 PM IST (10:15 AM UTC) after market close
     - cron: '15 10 * * 1-5'
     # Also run at 9:00 AM IST before market opens
-    - cron: '30 3 * * 1-5'
+    #- cron: '30 3 * * 1-5'
   workflow_dispatch:
     inputs:
       stock_symbol:
