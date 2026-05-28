@@ -9,8 +9,8 @@ name: Fetch Fyers FnO Data
 #   FYERS_ACCESS_TOKEN   → daily access token (update before 10:30 UTC each day)
 # ─────────────────────────────────────────────────────────────────────────────
 on:
-  schedule:
-    - cron: "30 10 * * 1-5"   # 10:30 UTC = 16:00 IST, Mon–Fri
+  #schedule:
+    #- cron: "30 10 * * 1-5"   # 10:30 UTC = 16:00 IST, Mon–Fri
 
   workflow_dispatch:
     inputs:
